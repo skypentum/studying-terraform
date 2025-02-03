@@ -66,15 +66,49 @@ resource "aws_internet_gateway" "vpc-ec2-private-igw" {
   }
 }
 
+resource "aws_network_interface" "ec2-private-os-amazon-linux" {
+  subnet_id = aws_subnet.vpc-ec2-private-subnet.id
+  private_ips = ["10.1.30.10"]
+  security_groups = [aws_security_group.vpc-ec2-private-ec2-sg.id]
+  tags = {
+    Name = "ec2-private-os-amazon-linux-private-network"
+  }
+}
+
 resource "aws_instance" "vpc-ec2-private-os-amazon-linux" {
   ami           = "ami-0a998385ed9f45655" # Amazon Linux AMI ID (defult)
   instance_type = "t2.micro"
-  subnet_id     = aws_subnet.vpc-ec2-private-subnet.id
   availability_zone = "ap-northeast-2a" # 변경 가능
-  key_name      = aws_key_pair.ssh-key.key_name
-  security_groups = [aws_security_group.vpc-ec2-private-ec2-sg.id]
+  key_name      = aws_key_pair.ssh-key.key_name  
+  network_interface {
+    network_interface_id = aws_network_interface.ec2-private-os-amazon-linux.id
+    device_index         = 0
+  }
   tags = {
     Name = "vpc-ec2-private-os-amazon-linux-Instance"
+  }
+}
+
+resource "aws_network_interface" "ec2-private-os-ubuntu" {
+  subnet_id = aws_subnet.vpc-ec2-private-subnet.id
+  private_ips = ["10.1.30.11"]
+  security_groups = [aws_security_group.vpc-ec2-private-ec2-sg.id]
+  tags = {
+    Name = "ec2-private-os-ubuntu-private-network"
+  }
+}
+
+resource "aws_instance" "vpc-ec2-private-os-ubuntu" {
+  ami           = "ami-024ea438ab0376a47" # Ubuntu AMI ID (defult)
+  instance_type = "t2.micro"
+  availability_zone = "ap-northeast-2a" # 변경 가능
+  key_name      = aws_key_pair.ssh-key.key_name  
+  network_interface {
+    network_interface_id = aws_network_interface.ec2-private-os-ubuntu.id
+    device_index         = 0
+  }
+  tags = {
+    Name = "vpc-ec2-private-os-ubuntu-Instance"
   }
 }
 
@@ -90,42 +124,30 @@ resource "aws_instance" "vpc-ec2-private-os-amazon-linux" {
 #   }
 # }
 
-# resource "aws_instance" "vpc-ec2-private-os-ubuntu" {
-#   ami           = "ami-024e438ab0376a47" # Ubuntu AMI ID (defult)
-#   instance_type = "t2.micro"
-#   subnet_id     = aws_subnet.vpc-ec2-private-subnet.id
-#   availability_zone = "ap-northeast-2a" # 변경 가능
-#   key_name      = aws_key_pair.ssh-key.key_name
-#   security_groups = [aws_security_group.vpc-ec2-private-ec2-sg.id]
-#   tags = {
-#     Name = "vpc-ec2-private-os-ubuntu-Instance"
-#   }
-# }
+resource "aws_eip" "vpc-ec2-private-nat-eip" {
+  domain = "vpc"
+}
 
-# resource "aws_eip" "vpc-ec2-private-nat-eip" {
-#   domain = "vpc"
-# }
+resource "aws_nat_gateway" "vpc-ec2-private-nat" {
+  allocation_id = aws_eip.vpc-ec2-private-nat-eip.id
+  subnet_id     = aws_subnet.vpc-ec2-private-subnet.id
+  tags = {
+    Name = "nat-gateway"
+  }
+}
 
-# resource "aws_nat_gateway" "vpc-ec2-private-nat" {
-#   allocation_id = aws_eip.vpc-ec2-private-nat-eip.id
-#   subnet_id     = aws_subnet.vpc-ec2-private-subnet.id
-#   tags = {
-#     Name = "nat-gateway"
-#   }
-# }
+resource "aws_route_table" "vpc-ec2-private-rt" {
+  vpc_id = aws_vpc.vpc-ec2-private.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.vpc-ec2-private-nat.id
+  }
+  tags = {
+    Name = "vpc-ec2-private-route-table"
+  }
+}
 
-# resource "aws_route_table" "vpc-ec2-private-private-rt" {
-#   vpc_id = aws_vpc.vpc-ec2-private.id
-#   route {
-#     cidr_block = "0.0.0.0/0"
-#     # gateway_id = aws_nat_gateway.vpc-ec2-private-nat.id
-#   }
-#   tags = {
-#     Name = "vpc-ec2-private-route-table"
-#   }
-# }
-
-# resource "aws_route_table_association" "vpc-ec2-private-rt-association" {
-#   subnet_id      = aws_subnet.vpc-ec2-private-subnet.id
-#   route_table_id = aws_route_table.vpc-ec2-private-private-rt.id
-# }
+resource "aws_route_table_association" "vpc-ec2-private-rt-association" {
+  subnet_id      = aws_subnet.vpc-ec2-private-subnet.id
+  route_table_id = aws_route_table.vpc-ec2-private-rt.id
+}
