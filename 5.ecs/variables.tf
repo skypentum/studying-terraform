@@ -13,3 +13,9 @@ variable "aws_use_region" {
   type        = string
   default = "ap-northeast-2"
 }
+
+variable "vpc_id" {
+  description = "VPC ID"
+  type        = string
+  default = "vpc-0478a01cba5bf09c4"
+}
