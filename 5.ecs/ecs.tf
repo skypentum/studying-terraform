@@ -141,7 +141,6 @@ resource "aws_ecs_task_definition" "test-ecs-task" {
   network_mode             = "awsvpc"
   cpu                      = "256"
   memory                   = "512"
-
   execution_role_arn = aws_iam_role.ecs-task-exec.arn
 
   container_definitions = jsonencode([
@@ -158,7 +157,7 @@ resource "aws_ecs_task_definition" "test-ecs-task" {
     },
     {
       name      = "test-container2"
-      image     = "nginx"
+      image     = "httpd"
       essential = true
       portMappings = [
         {
@@ -175,10 +174,12 @@ resource "aws_ecs_service" "test-ecs-service" {
   cluster         = aws_ecs_cluster.test-ecs-cluster.id
   task_definition = aws_ecs_task_definition.test-ecs-task.arn
   launch_type     = "FARGATE"
+  desired_count   = 2 
 
   network_configuration {
     security_groups    = [aws_security_group.alb-sg.id]
     subnets           = [values(data.aws_subnet.common-subnet-list)[1].id, values(data.aws_subnet.common-subnet-list)[3].id]    
+    assign_public_ip = true
   }
 
   load_balancer {
