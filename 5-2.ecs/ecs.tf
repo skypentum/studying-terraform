@@ -53,6 +53,18 @@ data "aws_subnet" "common-subnet-list" {
 #   value = values(data.aws_subnet.common-subnet-list)[0].id
 # }
 
+resource "aws_eip" "vpc-common-nat-eip-a" {
+  domain = "vpc"
+}
+
+resource "aws_nat_gateway" "vpc-common-nat-a" {
+  allocation_id = aws_eip.vpc-common-nat-eip-a.id
+  subnet_id     = values(data.aws_subnet.common-subnet-list)[1].id
+  tags = {
+    Name = "nat-gateway"
+  }
+}
+
 resource "aws_security_group" "alb-sg" {
   vpc_id = data.aws_vpc.vpc-common.id
   ingress {
@@ -146,7 +158,7 @@ resource "aws_ecs_task_definition" "test-ecs-task" {
   container_definitions = jsonencode([
     {
       name      = "test-container1"
-      image     = "nginx"
+      image     = "nginx:stable"
       essential = true
       portMappings = [
         {
@@ -157,7 +169,7 @@ resource "aws_ecs_task_definition" "test-ecs-task" {
     },
     {
       name      = "test-container2"
-      image     = "httpd"
+      image     = "httpd:2.4"
       essential = true
       portMappings = [
         {
@@ -177,9 +189,9 @@ resource "aws_ecs_service" "test-ecs-service" {
   desired_count   = 2 
 
   network_configuration {
-    security_groups    = [aws_security_group.alb-sg.id]
+    security_groups    = [aws_security_group.ecs-sg.id]
     subnets           = [values(data.aws_subnet.common-subnet-list)[1].id, values(data.aws_subnet.common-subnet-list)[3].id]    
-    assign_public_ip = true
+    # assign_public_ip = true
   }
 
   load_balancer {
