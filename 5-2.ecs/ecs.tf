@@ -25,6 +25,12 @@ resource "aws_iam_role_policy_attachment" "ecs-task-exec-policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_policy_attachment" "ecs-ecr-access" {
+  name       = "ecs-ecr-access"
+  roles      = [aws_iam_role.ecs-task-exec.name]
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
 data "aws_vpc" "vpc-common" {
   id = var.vpc_id
 }
@@ -53,17 +59,41 @@ data "aws_subnet" "common-subnet-list" {
 #   value = values(data.aws_subnet.common-subnet-list)[0].id
 # }
 
-resource "aws_eip" "vpc-common-nat-eip-a" {
-  domain = "vpc"
+data "aws_ecr_repository" "ecr-aws-nginx" {
+  name="aws-nginx"
 }
 
-resource "aws_nat_gateway" "vpc-common-nat-a" {
-  allocation_id = aws_eip.vpc-common-nat-eip-a.id
-  subnet_id     = values(data.aws_subnet.common-subnet-list)[1].id
-  tags = {
-    Name = "nat-gateway"
-  }
+data "aws_ecr_repository" "ecr-aws-httpd" {
+  name="aws-httpd"
 }
+
+# output "aws-nginx" {
+#   value = data.aws_ecr_repository.aws-nginx.repository_url
+# }
+
+# resource "aws_eip" "vpc-common-nat-eip-a" {
+#   domain = "vpc"
+# }
+
+# resource "aws_nat_gateway" "vpc-common-nat-a" {
+#   allocation_id = aws_eip.vpc-common-nat-eip-a.id
+#   subnet_id     = values(data.aws_subnet.common-subnet-list)[1].id
+#   tags = {
+#     Name = "nat-gateway-private-a"
+#   }
+# }
+
+# resource "aws_eip" "vpc-common-nat-eip-c" {
+#   domain = "vpc"
+# }
+
+# resource "aws_nat_gateway" "vpc-common-nat-c" {
+#   allocation_id = aws_eip.vpc-common-nat-eip-c.id
+#   subnet_id     = values(data.aws_subnet.common-subnet-list)[3].id
+#   tags = {
+#     Name = "nat-gateway-private-c"
+#   }
+# }
 
 resource "aws_security_group" "alb-sg" {
   vpc_id = data.aws_vpc.vpc-common.id
@@ -73,6 +103,14 @@ resource "aws_security_group" "alb-sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -89,6 +127,14 @@ resource "aws_security_group" "ecs-sg" {
     protocol    = "tcp"
     security_groups = [aws_security_group.alb-sg.id]
   }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    security_groups = [aws_security_group.alb-sg.id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -147,7 +193,7 @@ resource "aws_ecs_cluster" "test-ecs-cluster" {
   name = "test-ecs-cluster"
 }
 
-resource "aws_ecs_task_definition" "test-ecs-task" {
+resource "aws_ecs_task_definition" "ecr-aws-nginx-task" {
   family                   = "ecs-task"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
@@ -157,8 +203,8 @@ resource "aws_ecs_task_definition" "test-ecs-task" {
 
   container_definitions = jsonencode([
     {
-      name      = "test-container1"
-      image     = "nginx:stable"
+      name      = "ecr-aws-nginx-container"
+      image     = "${data.aws_ecr_repository.ecr-aws-nginx.repository_url}:latest"
       essential = true
       portMappings = [
         {
@@ -166,10 +212,22 @@ resource "aws_ecs_task_definition" "test-ecs-task" {
           hostPort      = 80
         }
       ]
-    },
+    }
+  ])
+}
+
+resource "aws_ecs_task_definition" "ecr-aws-httpd-task" {
+  family                   = "ecs-task"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn = aws_iam_role.ecs-task-exec.arn
+
+  container_definitions = jsonencode([
     {
-      name      = "test-container2"
-      image     = "httpd:2.4"
+      name      = "ecr-aws-httpd-container"
+      image     = "${data.aws_ecr_repository.ecr-aws-httpd.repository_url}:latest"
       essential = true
       portMappings = [
         {
@@ -181,31 +239,47 @@ resource "aws_ecs_task_definition" "test-ecs-task" {
   ])
 }
 
-resource "aws_ecs_service" "test-ecs-service" {
+resource "aws_ecs_service" "test-ecs-service1" {
   name            = "ecs-service"
   cluster         = aws_ecs_cluster.test-ecs-cluster.id
-  task_definition = aws_ecs_task_definition.test-ecs-task.arn
+  task_definition = aws_ecs_task_definition.ecr-aws-nginx-task.arn
   launch_type     = "FARGATE"
-  desired_count   = 2 
+  desired_count   = 2
 
   network_configuration {
     security_groups    = [aws_security_group.ecs-sg.id]
-    subnets           = [values(data.aws_subnet.common-subnet-list)[1].id, values(data.aws_subnet.common-subnet-list)[3].id]    
-    # assign_public_ip = true
+    subnets           = [values(data.aws_subnet.common-subnet-list)[0].id, values(data.aws_subnet.common-subnet-list)[2].id]    
+    assign_public_ip = true
   }
 
   load_balancer {
     target_group_arn = aws_alb_target_group.ecs-tg1.arn
-    container_name   = "test-container1"
+    container_name   = "ecr-aws-nginx-container"
     container_port   = 80
+  }
+}
+
+resource "aws_ecs_service" "test-ecs-service2" {
+  name            = "ecs-service2"
+  cluster         = aws_ecs_cluster.test-ecs-cluster.id
+  task_definition = aws_ecs_task_definition.ecr-aws-httpd-task.arn
+  launch_type     = "FARGATE"
+  desired_count   = 2
+
+  network_configuration {
+    security_groups    = [aws_security_group.ecs-sg.id]
+    subnets           = [values(data.aws_subnet.common-subnet-list)[0].id, values(data.aws_subnet.common-subnet-list)[2].id]    
+    assign_public_ip = true
   }
 
   load_balancer {
     target_group_arn = aws_alb_target_group.ecs-tg2.arn
-    container_name   = "test-container2"
+    container_name   = "ecr-aws-httpd-container"
     container_port   = 8080
   }
 }
+
+
 
 output "alb_url" {
   value = aws_alb.ecs-alb.dns_name
