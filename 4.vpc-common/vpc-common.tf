@@ -33,7 +33,7 @@ resource "aws_subnet" "vpc-common-public_subnet-a" {
 
 resource "aws_subnet" "vpc-common-public_subnet-c" {
   vpc_id                  = aws_vpc.vpc-common.id
-  cidr_block              = "10.2.30.0/24"
+  cidr_block              = "10.2.50.0/24"
   availability_zone       = "ap-northeast-2c"
   map_public_ip_on_launch = true
   tags = {
@@ -54,7 +54,7 @@ resource "aws_subnet" "vpc-common-private-subnet-a" {
 
 resource "aws_subnet" "vpc-common-private-subnet-c" {
   vpc_id            = aws_vpc.vpc-common.id
-  cidr_block        = "10.2.130.0/24"
+  cidr_block        = "10.2.150.0/24"
   availability_zone = "ap-northeast-2c" # 해당 대역대와 동일한 AZ 구성 필요
   map_public_ip_on_launch = false
   tags = {
@@ -71,13 +71,6 @@ resource "aws_security_group" "vpc-common-sg" {
     protocol    = "tcp"
     cidr_blocks = ["211.60.209.194/32"]
   }
-
-  # ingress {
-  #   from_port   = 8080
-  #   to_port     = 8080
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["0.0.0.0/0"]
-  # }
 
   egress {
     from_port   = 0
@@ -98,6 +91,18 @@ resource "aws_internet_gateway" "vpc-common-igw" {
   }
 }
 
+# Public Subnet Route Table (Public 서브넷은 IGW를 통해 인터넷 연결)
+resource "aws_route_table" "vpc-common-public-rt" {
+  vpc_id = aws_vpc.vpc-common.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.vpc-common-igw.id # ✅ IGW를 통해 인터넷 연결
+  }
+  tags = {
+    Name = "vpc-common-public-route-table"
+  }
+}
+
 # resource "aws_eip" "vpc-common-nat-eip-a" {
 #   domain = "vpc"
 # }
@@ -105,18 +110,6 @@ resource "aws_internet_gateway" "vpc-common-igw" {
 # resource "aws_nat_gateway" "vpc-common-nat-a" {
 #   allocation_id = aws_eip.vpc-common-nat-eip-a.id
 #   subnet_id     = aws_subnet.vpc-common-private-subnet-a.id
-#   tags = {
-#     Name = "nat-gateway"
-#   }
-# }
-
-# resource "aws_eip" "vpc-common-nat-eip-c" {
-#   domain = "vpc"
-# }
-
-# resource "aws_nat_gateway" "vpc-common-nat-c" {
-#   allocation_id = aws_eip.vpc-common-nat-eip-c.id
-#   subnet_id     = aws_subnet.vpc-common-private-subnet-c.id
 #   tags = {
 #     Name = "nat-gateway"
 #   }
@@ -138,7 +131,37 @@ resource "aws_internet_gateway" "vpc-common-igw" {
 #   route_table_id = aws_route_table.vpc-common-rt.id
 # }
 
+# resource "aws_eip" "vpc-common-nat-eip-c" {
+#   domain = "vpc"
+# }
+
+# resource "aws_nat_gateway" "vpc-common-nat-c" {
+#   allocation_id = aws_eip.vpc-common-nat-eip-c.id
+#   subnet_id     = aws_subnet.vpc-common-private-subnet-c.id
+#   tags = {
+#     Name = "nat-gateway"
+#   }
+# }
+
+# resource "aws_eip" "vpc-common-nat-eip-c" {
+#   domain = "vpc"
+# }
+
+# resource "aws_route_table" "vpc-common-rt-c" {
+#   vpc_id = aws_vpc.vpc-common.id
+#   route {
+#     cidr_block = "0.0.0.0/0"
+#     gateway_id = aws_nat_gateway.vpc-common-nat-a.id
+#   }
+#   tags = {
+#     Name = "vpc-common-route-table"
+#   }
+# }
+
 # resource "aws_route_table_association" "vpc-common-rt-c-association" {
 #   subnet_id      = aws_subnet.vpc-common-private-subnet-c.id
 #   route_table_id = aws_route_table.vpc-common-rt.id
 # }
+
+
+
