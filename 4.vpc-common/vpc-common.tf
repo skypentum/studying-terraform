@@ -62,28 +62,6 @@ resource "aws_subnet" "vpc-common-private-subnet-c" {
   }
 }
 
-resource "aws_security_group" "vpc-common-sg" {
-  vpc_id = aws_vpc.vpc-common.id
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["211.60.209.194/32"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "vpc-ec2-security-group"
-  }
-}
-
 resource "aws_internet_gateway" "vpc-common-igw" {
   vpc_id = aws_vpc.vpc-common.id
   tags = {

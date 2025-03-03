@@ -80,6 +80,10 @@ data "aws_ecr_repository" "ecr-aws-httpd" {
   name="aws-httpd"
 }
 
+output "ecr-url1" {
+  value = data.aws_ecr_repository.ecr-aws-nginx.repository_url
+}
+
 resource "aws_eip" "vpc-common-nat-eip-a" {
   domain = "vpc"
 }
@@ -109,34 +113,34 @@ resource "aws_route_table_association" "vpc-common-rt-a-association" {
   route_table_id = aws_route_table.vpc-common-rt-a.id
 }
 
-# resource "aws_eip" "vpc-common-nat-eip-c" {
-#   domain = "vpc"
-# }
+resource "aws_eip" "vpc-common-nat-eip-c" {
+  domain = "vpc"
+}
 
-# resource "aws_nat_gateway" "vpc-common-nat-c" {
-#   allocation_id = aws_eip.vpc-common-nat-eip-c.id
-#   subnet_id     = values(data.aws_subnet.common-subnet-list)[2].id
-#   tags = {
-#     Name = "nat-gateway-private-c"
-#   }
-# }
+resource "aws_nat_gateway" "vpc-common-nat-c" {
+  allocation_id = aws_eip.vpc-common-nat-eip-c.id
+  subnet_id     = values(data.aws_subnet.common-subnet-list)[2].id
+  tags = {
+    Name = "nat-gateway-private-c"
+  }
+}
 
-# resource "aws_route_table" "vpc-common-rt-c" {
-#   vpc_id = data.aws_vpc.vpc-common.id
-#   route {
-#     cidr_block = "0.0.0.0/0"
-#     gateway_id = aws_nat_gateway.vpc-common-nat-c.id
-#   }
+resource "aws_route_table" "vpc-common-rt-c" {
+  vpc_id = data.aws_vpc.vpc-common.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.vpc-common-nat-c.id
+  }
 
-#   tags = {
-#     Name = "vpc-common-route-table-c"
-#   }
-# }
+  tags = {
+    Name = "vpc-common-route-table-c"
+  }
+}
 
-# resource "aws_route_table_association" "vpc-common-rt-c-association" {
-#   subnet_id      = values(data.aws_subnet.common-subnet-list)[2].id
-#   route_table_id = aws_route_table.vpc-common-rt-c.id
-# }
+resource "aws_route_table_association" "vpc-common-rt-c-association" {
+  subnet_id      = values(data.aws_subnet.common-subnet-list)[2].id
+  route_table_id = aws_route_table.vpc-common-rt-c.id
+}
 
 resource "aws_security_group" "alb-sg" {
   vpc_id = data.aws_vpc.vpc-common.id
@@ -182,6 +186,13 @@ resource "aws_security_group" "ecs-sg" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
