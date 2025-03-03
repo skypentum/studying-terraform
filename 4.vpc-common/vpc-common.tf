@@ -21,7 +21,14 @@ resource "aws_vpc" "vpc-common" {
   }
 }
 
-resource "aws_subnet" "vpc-common-public_subnet-a" {
+resource "aws_internet_gateway" "vpc-common-igw" {
+  vpc_id = aws_vpc.vpc-common.id
+  tags = {
+    Name = "vpc-common-igw"
+  }
+}
+
+resource "aws_subnet" "vpc-common-public-subnet-a" {
   vpc_id                  = aws_vpc.vpc-common.id
   cidr_block              = "10.2.20.0/24"
   availability_zone       = "ap-northeast-2a"
@@ -31,7 +38,7 @@ resource "aws_subnet" "vpc-common-public_subnet-a" {
   }
 }
 
-resource "aws_subnet" "vpc-common-public_subnet-c" {
+resource "aws_subnet" "vpc-common-public-subnet-c" {
   vpc_id                  = aws_vpc.vpc-common.id
   cidr_block              = "10.2.50.0/24"
   availability_zone       = "ap-northeast-2c"
@@ -62,13 +69,6 @@ resource "aws_subnet" "vpc-common-private-subnet-c" {
   }
 }
 
-resource "aws_internet_gateway" "vpc-common-igw" {
-  vpc_id = aws_vpc.vpc-common.id
-  tags = {
-    Name = "vpc-common-igw"
-  }
-}
-
 # Public Subnet Route Table (Public 서브넷은 IGW를 통해 인터넷 연결)
 resource "aws_route_table" "vpc-common-public-rt" {
   vpc_id = aws_vpc.vpc-common.id
@@ -81,19 +81,29 @@ resource "aws_route_table" "vpc-common-public-rt" {
   }
 }
 
+resource "aws_route_table_association" "common-public-subnet-a-association" {
+  subnet_id      = aws_subnet.vpc-common-public-subnet-a.id
+  route_table_id = aws_route_table.vpc-common-public-rt.id
+}
+
+resource "aws_route_table_association" "common-public-subnet-c-association" {
+  subnet_id      = aws_subnet.vpc-common-public-subnet-c.id
+  route_table_id = aws_route_table.vpc-common-public-rt.id
+}
+
 # resource "aws_eip" "vpc-common-nat-eip-a" {
 #   domain = "vpc"
 # }
 
 # resource "aws_nat_gateway" "vpc-common-nat-a" {
 #   allocation_id = aws_eip.vpc-common-nat-eip-a.id
-#   subnet_id     = aws_subnet.vpc-common-private-subnet-a.id
+#   subnet_id     = aws_subnet.vpc-common-public-subnet-a.id
 #   tags = {
-#     Name = "nat-gateway"
+#     Name = "nat-gateway-a"
 #   }
 # }
 
-# resource "aws_route_table" "vpc-common-rt" {
+# resource "aws_route_table" "vpc-common-rt-a" {
 #   vpc_id = aws_vpc.vpc-common.id
 #   route {
 #     cidr_block = "0.0.0.0/0"
@@ -105,7 +115,7 @@ resource "aws_route_table" "vpc-common-public-rt" {
 # }
 
 # resource "aws_route_table_association" "vpc-common-rt-a-association" {
-#   subnet_id      = aws_subnet.vpc-common-private-subnet-a.id
+#   subnet_id      = aws_subnet.vpc-common-public-subnet-a.id
 #   route_table_id = aws_route_table.vpc-common-rt.id
 # }
 
