@@ -38,7 +38,7 @@ resource "aws_security_group" "bastion_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["211.60.209.194/32"] # 실제로는 자신의 IP로 제한 추천
+    cidr_blocks = ["0.0.0.0/0"] # 실제로는 자신의 IP로 제한 추천
   }
   
   egress {

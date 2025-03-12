@@ -64,9 +64,22 @@ data "aws_subnet" "common-subnet-list" {
   id       = each.value
 }
 
-# output "common-subnet-id" {
-#   value = [for s in data.aws_subnet.common-subnet-list : s.id]
-# }
+output "common-subnet-id" {
+  value = [for s in data.aws_subnet.common-subnet-list : s.id]
+}
+
+data "aws_subnets" "existing_subnets" {
+  filter {
+    name   = "tag:Name"
+    values = ["vpc-common-private-subnet-a", "vpc-common-private-subnet-c"]
+  }
+}
+
+output "vpc-common-private-subnet-c" {
+  value = values(data.aws_subnets.existing_subnets)[2][0]
+}
+
+
 
 # output "common-subnet-cidr-blocks-first" {
 #   value = values(data.aws_subnet.common-subnet-list)[0].id
@@ -308,7 +321,7 @@ resource "aws_ecs_service" "test-ecs-service1" {
 
   network_configuration {
     security_groups    = [aws_security_group.ecs-sg.id]
-    subnets           = [values(data.aws_subnet.common-subnet-list)[1].id, values(data.aws_subnet.common-subnet-list)[3].id]    
+    subnets           = [values(data.aws_subnets.existing_subnets)[2][0], values(data.aws_subnets.existing_subnets)[2][1]]    
     # assign_public_ip = true
   }
 
@@ -328,7 +341,7 @@ resource "aws_ecs_service" "test-ecs-service2" {
 
   network_configuration {
     security_groups    = [aws_security_group.ecs-sg.id]
-    subnets           = [values(data.aws_subnet.common-subnet-list)[1].id, values(data.aws_subnet.common-subnet-list)[3].id]    
+    subnets           = [values(data.aws_subnets.existing_subnets)[2][0], values(data.aws_subnets.existing_subnets)[2][1]]    
     # assign_public_ip = true
   }
 

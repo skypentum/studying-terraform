@@ -17,5 +17,5 @@ variable "aws_use_region" {
 variable "vpc_id" {
   description = "VPC ID"
   type        = string
-  default = "vpc-0a34fa18e4dd85c52"
+  default = "vpc-044d78a8b3671de35"
 }
