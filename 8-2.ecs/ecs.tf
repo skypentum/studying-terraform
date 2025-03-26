@@ -64,22 +64,24 @@ data "aws_subnet" "common-subnet-list" {
   id       = each.value
 }
 
-output "common-subnet-id" {
-  value = [for s in data.aws_subnet.common-subnet-list : s.id]
-}
+# output "common-subnet-id" {
+#   value = [for s in data.aws_subnet.common-subnet-list : s.id]
+# }
 
-data "aws_subnets" "existing_subnets" {
+data "aws_subnets" "existing_private_subnets" {
   filter {
     name   = "tag:Name"
     values = ["vpc-common-private-subnet-a", "vpc-common-private-subnet-c"]
   }
 }
 
-output "vpc-common-private-subnet-c" {
-  value = values(data.aws_subnets.existing_subnets)[2][0]
+output "vpc-common-private-subnet-a" {
+  value = values(data.aws_subnets.existing_private_subnets)[2][0]
 }
 
-
+output "vpc-common-private-subnet-c" {
+  value = values(data.aws_subnets.existing_private_subnets)[2][1]
+}
 
 # output "common-subnet-cidr-blocks-first" {
 #   value = values(data.aws_subnet.common-subnet-list)[0].id
@@ -95,64 +97,6 @@ data "aws_ecr_repository" "ecr-aws-httpd" {
 
 output "ecr-url1" {
   value = data.aws_ecr_repository.ecr-aws-nginx.repository_url
-}
-
-resource "aws_eip" "vpc-common-nat-eip-a" {
-  domain = "vpc"
-}
-
-resource "aws_nat_gateway" "vpc-common-nat-a" {
-  allocation_id = aws_eip.vpc-common-nat-eip-a.id
-  subnet_id     = values(data.aws_subnet.common-subnet-list)[0].id
-  tags = {
-    Name = "nat-gateway-private-a"
-  }
-}
-
-resource "aws_route_table" "vpc-common-rt-a" {
-  vpc_id = data.aws_vpc.vpc-common.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.vpc-common-nat-a.id
-  }
-
-  tags = {
-    Name = "vpc-common-route-table-a"
-  }
-}
-
-resource "aws_route_table_association" "vpc-common-rt-a-association" {
-  subnet_id      = values(data.aws_subnet.common-subnet-list)[0].id
-  route_table_id = aws_route_table.vpc-common-rt-a.id
-}
-
-resource "aws_eip" "vpc-common-nat-eip-c" {
-  domain = "vpc"
-}
-
-resource "aws_nat_gateway" "vpc-common-nat-c" {
-  allocation_id = aws_eip.vpc-common-nat-eip-c.id
-  subnet_id     = values(data.aws_subnet.common-subnet-list)[2].id
-  tags = {
-    Name = "nat-gateway-private-c"
-  }
-}
-
-resource "aws_route_table" "vpc-common-rt-c" {
-  vpc_id = data.aws_vpc.vpc-common.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.vpc-common-nat-c.id
-  }
-
-  tags = {
-    Name = "vpc-common-route-table-c"
-  }
-}
-
-resource "aws_route_table_association" "vpc-common-rt-c-association" {
-  subnet_id      = values(data.aws_subnet.common-subnet-list)[2].id
-  route_table_id = aws_route_table.vpc-common-rt-c.id
 }
 
 resource "aws_security_group" "alb-sg" {
@@ -321,7 +265,7 @@ resource "aws_ecs_service" "test-ecs-service1" {
 
   network_configuration {
     security_groups    = [aws_security_group.ecs-sg.id]
-    subnets           = [values(data.aws_subnets.existing_subnets)[2][0], values(data.aws_subnets.existing_subnets)[2][1]]    
+    subnets           = [values(data.aws_subnets.existing_private_subnets)[2][0], values(data.aws_subnets.existing_private_subnets)[2][1]]    
     # assign_public_ip = true
   }
 
@@ -341,7 +285,7 @@ resource "aws_ecs_service" "test-ecs-service2" {
 
   network_configuration {
     security_groups    = [aws_security_group.ecs-sg.id]
-    subnets           = [values(data.aws_subnets.existing_subnets)[2][0], values(data.aws_subnets.existing_subnets)[2][1]]    
+    subnets           = [values(data.aws_subnets.existing_private_subnets)[2][0], values(data.aws_subnets.existing_private_subnets)[2][1]]    
     # assign_public_ip = true
   }
 

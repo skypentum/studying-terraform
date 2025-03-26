@@ -4,12 +4,12 @@ provider "aws" {
   region = var.aws_use_region
 }
 
-# 아래 명령어를 사용하여 ssh 공개 키 생성
-# ssh-keygen -t rsa -b 2048 -f ssh-key/id_rsa 
-resource "aws_key_pair" "ssh-key" {
-  key_name   = "default-key-pair"
-  public_key = file("../ssh-key/id_rsa.pub") # 로컬 공개키 경로 설정
-}
+# # 아래 명령어를 사용하여 ssh 공개 키 생성
+# # ssh-keygen -t rsa -b 2048 -f ssh-key/id_rsa 
+# resource "aws_key_pair" "ssh-key" {
+#   key_name   = "default-key-pair"
+#   public_key = file("../ssh-key/id_rsa.pub") # 로컬 공개키 경로 설정
+# }
 
 
 resource "aws_vpc" "vpc-common" {
@@ -91,65 +91,61 @@ resource "aws_route_table_association" "common-public-subnet-c-association" {
   route_table_id = aws_route_table.vpc-common-public-rt.id
 }
 
-# resource "aws_eip" "vpc-common-nat-eip-a" {
-#   domain = "vpc"
-# }
+resource "aws_eip" "vpc-common-nat-eip-a" {
+  domain = "vpc"
+}
 
-# resource "aws_nat_gateway" "vpc-common-nat-a" {
-#   allocation_id = aws_eip.vpc-common-nat-eip-a.id
-#   subnet_id     = aws_subnet.vpc-common-public-subnet-a.id
-#   tags = {
-#     Name = "nat-gateway-a"
-#   }
-# }
+resource "aws_nat_gateway" "vpc-common-nat-a" {
+  allocation_id = aws_eip.vpc-common-nat-eip-a.id
+  subnet_id     = aws_subnet.vpc-common-public-subnet-a.id
+  tags = {
+    Name = "nat-gateway-a"
+  }
+}
 
-# resource "aws_route_table" "vpc-common-rt-a" {
-#   vpc_id = aws_vpc.vpc-common.id
-#   route {
-#     cidr_block = "0.0.0.0/0"
-#     gateway_id = aws_nat_gateway.vpc-common-nat-a.id
-#   }
-#   tags = {
-#     Name = "vpc-common-route-table"
-#   }
-# }
+resource "aws_route_table" "vpc-common-rt-a" {
+  vpc_id = aws_vpc.vpc-common.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.vpc-common-nat-a.id
+  }
+  tags = {
+    Name = "vpc-common-private-route-table-a"
+  }
+}
 
-# resource "aws_route_table_association" "vpc-common-rt-a-association" {
-#   subnet_id      = aws_subnet.vpc-common-public-subnet-a.id
-#   route_table_id = aws_route_table.vpc-common-rt.id
-# }
+resource "aws_route_table_association" "vpc-common-rt-a-association" {
+  subnet_id      = aws_subnet.vpc-common-private-subnet-a.id
+  route_table_id = aws_route_table.vpc-common-rt-a.id
+}
 
-# resource "aws_eip" "vpc-common-nat-eip-c" {
-#   domain = "vpc"
-# }
+resource "aws_eip" "vpc-common-nat-eip-c" {
+  domain = "vpc"
+}
 
-# resource "aws_nat_gateway" "vpc-common-nat-c" {
-#   allocation_id = aws_eip.vpc-common-nat-eip-c.id
-#   subnet_id     = aws_subnet.vpc-common-private-subnet-c.id
-#   tags = {
-#     Name = "nat-gateway"
-#   }
-# }
+resource "aws_nat_gateway" "vpc-common-nat-c" {
+  allocation_id = aws_eip.vpc-common-nat-eip-c.id
+  subnet_id     = aws_subnet.vpc-common-private-subnet-c.id
+  tags = {
+    Name = "nat-gateway-c"
+  }
+}
 
-# resource "aws_eip" "vpc-common-nat-eip-c" {
-#   domain = "vpc"
-# }
+resource "aws_route_table" "vpc-common-rt-c" {
+  vpc_id = aws_vpc.vpc-common.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.vpc-common-nat-a.id
+  }
+  tags = {
+    Name = "vpc-common-private-route-table-c"
+  }
+}
 
-# resource "aws_route_table" "vpc-common-rt-c" {
-#   vpc_id = aws_vpc.vpc-common.id
-#   route {
-#     cidr_block = "0.0.0.0/0"
-#     gateway_id = aws_nat_gateway.vpc-common-nat-a.id
-#   }
-#   tags = {
-#     Name = "vpc-common-route-table"
-#   }
-# }
-
-# resource "aws_route_table_association" "vpc-common-rt-c-association" {
-#   subnet_id      = aws_subnet.vpc-common-private-subnet-c.id
-#   route_table_id = aws_route_table.vpc-common-rt.id
-# }
+resource "aws_route_table_association" "vpc-common-rt-c-association" {
+  subnet_id      = aws_subnet.vpc-common-private-subnet-c.id
+  route_table_id = aws_route_table.vpc-common-rt-c.id
+}
 
 
 
