@@ -166,6 +166,29 @@ resource "aws_lambda_permission" "alb" {
     source_arn    = aws_lb_target_group.lambda.arn
 }
 
+resource "aws_cloudfront_cache_policy" "dynamic_caching" {
+  name        = "DynamicContentCaching"
+  comment     = "Policy for caching dynamic content"
+  default_ttl = 3600
+  max_ttl     = 86400
+  min_ttl     = 1
+  
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "all"
+    }
+    headers_config {
+      header_behavior = "whitelist"
+      headers {
+        items = ["Host", "Origin", "Referer"]
+      }
+    }
+    query_strings_config {
+      query_string_behavior = "all"
+    }
+  }
+}
+
 # CloudFront Distribution
 resource "aws_cloudfront_distribution" "alb" {
     origin {
@@ -187,18 +210,10 @@ resource "aws_cloudfront_distribution" "alb" {
         cached_methods   = ["GET", "HEAD"]
         target_origin_id = "alb-origin"
 
-        forwarded_values {
-            query_string = true
-            headers = ["*"]
-            cookies {
-                forward = "all"
-            }
-        }
-
+        cache_policy_id = aws_cloudfront_cache_policy.dynamic_caching.id
+       
         viewer_protocol_policy = "redirect-to-https"
-        min_ttl                = 0
-        default_ttl            = 0
-        max_ttl                = 0
+        compress              = true
     }
 
     price_class = "PriceClass_100"
