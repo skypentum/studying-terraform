@@ -75,6 +75,13 @@ data "aws_subnets" "existing_private_subnets" {
   }
 }
 
+data "aws_subnets" "existing_public_subnets" {
+  filter {
+    name   = "tag:Name"
+    values = ["vpc-common-public-subnet-a", "vpc-common-public-subnet-c"]
+  }
+}
+
 output "vpc-common-private-subnet-a" {
   value = values(data.aws_subnets.existing_private_subnets)[2][0]
 }
@@ -91,9 +98,9 @@ data "aws_ecr_repository" "ecr-aws-nginx" {
   name="aws-nginx"
 }
 
-data "aws_ecr_repository" "ecr-aws-httpd" {
-  name="aws-httpd"
-}
+# data "aws_ecr_repository" "ecr-aws-httpd" {
+#   name="aws-httpd"
+# }
 
 output "ecr-url1" {
   value = data.aws_ecr_repository.ecr-aws-nginx.repository_url
@@ -159,7 +166,7 @@ resource "aws_alb" "ecs-alb" {
   internal          = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb-sg.id]
-  subnets           = [values(data.aws_subnet.common-subnet-list)[0].id, values(data.aws_subnet.common-subnet-list)[2].id]
+  subnets           = [values(data.aws_subnets.existing_public_subnets)[2][0],values(data.aws_subnets.existing_public_subnets)[2][1]]
 }
 
 resource "aws_alb_target_group" "ecs-tg1" {
@@ -170,13 +177,13 @@ resource "aws_alb_target_group" "ecs-tg1" {
   target_type = "ip"
 }
 
-resource "aws_alb_target_group" "ecs-tg2" {
-  name     = "ecs-tg2"
-  port     = 8080
-  protocol = "HTTP"
-  vpc_id   = data.aws_vpc.vpc-common.id
-  target_type = "ip"
-}
+# resource "aws_alb_target_group" "ecs-tg2" {
+#   name     = "ecs-tg2"
+#   port     = 8080
+#   protocol = "HTTP"
+#   vpc_id   = data.aws_vpc.vpc-common.id
+#   target_type = "ip"
+# }
 
 resource "aws_alb_listener" "http1" {
   load_balancer_arn = aws_alb.ecs-alb.arn
@@ -189,16 +196,16 @@ resource "aws_alb_listener" "http1" {
   }
 }
 
-resource "aws_alb_listener" "http2" {
-  load_balancer_arn = aws_alb.ecs-alb.arn
-  port              = 8080
-  protocol          = "HTTP"
+# resource "aws_alb_listener" "http2" {
+#   load_balancer_arn = aws_alb.ecs-alb.arn
+#   port              = 8080
+#   protocol          = "HTTP"
 
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_alb_target_group.ecs-tg2.arn
-  }
-}
+#   default_action {
+#     type             = "forward"
+#     target_group_arn = aws_alb_target_group.ecs-tg2.arn
+#   }
+# }
 
 resource "aws_ecs_cluster" "test-ecs-cluster" {
   name = "test-ecs-cluster"
@@ -230,38 +237,38 @@ resource "aws_ecs_task_definition" "ecr-aws-nginx-task" {
   ])
 }
 
-resource "aws_ecs_task_definition" "ecr-aws-httpd-task" {
-  family                   = "ecs-task"
-  requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
-  execution_role_arn = aws_iam_role.ecs-task-exec.arn
-  task_role_arn      = aws_iam_role.ecs_task_role.arn
-  cpu       = "256"
-  memory    = "512"
+# resource "aws_ecs_task_definition" "ecr-aws-httpd-task" {
+#   family                   = "ecs-task"
+#   requires_compatibilities = ["FARGATE"]
+#   network_mode             = "awsvpc"
+#   execution_role_arn = aws_iam_role.ecs-task-exec.arn
+#   task_role_arn      = aws_iam_role.ecs_task_role.arn
+#   cpu       = "256"
+#   memory    = "512"
 
-  container_definitions = jsonencode([
-    {
-      name      = "ecr-aws-httpd-container"
-      image     = "${data.aws_ecr_repository.ecr-aws-httpd.repository_url}:latest"      
-      essential = true
-      cpu       = 256
-      memory    = 512
-      portMappings = [
-        {
-          containerPort = 8080
-          hostPort      = 8080
-        }
-      ]
-    }
-  ])
-}
+#   container_definitions = jsonencode([
+#     {
+#       name      = "ecr-aws-httpd-container"
+#       image     = "${data.aws_ecr_repository.ecr-aws-httpd.repository_url}:latest"      
+#       essential = true
+#       cpu       = 256
+#       memory    = 512
+#       portMappings = [
+#         {
+#           containerPort = 8080
+#           hostPort      = 8080
+#         }
+#       ]
+#     }
+#   ])
+# }
 
 resource "aws_ecs_service" "test-ecs-service1" {
   name            = "ecs-service"
   cluster         = aws_ecs_cluster.test-ecs-cluster.id
   task_definition = aws_ecs_task_definition.ecr-aws-nginx-task.arn
   launch_type     = "FARGATE"
-  desired_count   = 2
+  desired_count   = 1
 
   network_configuration {
     security_groups    = [aws_security_group.ecs-sg.id]
@@ -276,26 +283,26 @@ resource "aws_ecs_service" "test-ecs-service1" {
   }
 }
 
-resource "aws_ecs_service" "test-ecs-service2" {
-  name            = "ecs-service2"
-  cluster         = aws_ecs_cluster.test-ecs-cluster.id
-  task_definition = aws_ecs_task_definition.ecr-aws-httpd-task.arn
-  launch_type     = "FARGATE"
-  desired_count   = 2
+# resource "aws_ecs_service" "test-ecs-service2" {
+#   name            = "ecs-service2"
+#   cluster         = aws_ecs_cluster.test-ecs-cluster.id
+#   task_definition = aws_ecs_task_definition.ecr-aws-httpd-task.arn
+#   launch_type     = "FARGATE"
+#   desired_count   = 1
 
-  network_configuration {
-    security_groups    = [aws_security_group.ecs-sg.id]
-    subnets           = [values(data.aws_subnets.existing_private_subnets)[2][0], values(data.aws_subnets.existing_private_subnets)[2][1]]    
-    # assign_public_ip = true
-  }
+#   network_configuration {
+#     security_groups    = [aws_security_group.ecs-sg.id]
+#     subnets           = [values(data.aws_subnets.existing_private_subnets)[2][0], values(data.aws_subnets.existing_private_subnets)[2][1]]    
+#     # assign_public_ip = true
+#   }
 
-  load_balancer {
-    target_group_arn = aws_alb_target_group.ecs-tg2.arn
-    container_name   = "ecr-aws-httpd-container"
-    container_port   = 8080
-  }
-}
+#   load_balancer {
+#     target_group_arn = aws_alb_target_group.ecs-tg2.arn
+#     container_name   = "ecr-aws-httpd-container"
+#     container_port   = 8080
+#   }
+# }
 
-output "alb_url" {
-  value = aws_alb.ecs-alb.dns_name
-}
+# output "alb_url" {
+#   value = aws_alb.ecs-alb.dns_name
+# }
