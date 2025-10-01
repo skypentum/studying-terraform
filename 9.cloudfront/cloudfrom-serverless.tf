@@ -1,10 +1,3 @@
-#destination : terraform_program_access
-provider "aws" {
-  profile="studying_terraform"
-  region = var.aws_use_region
-}
-
-
 # VPC and Subnet configuration
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"

@@ -1,9 +1,3 @@
-#destination : terraform_program_access
-provider "aws" {
-  profile = "studying_terraform"
-  region  = var.aws_use_region
-}
-
 ###
 # Policy(교차 계정으로 이벤트 전송)
 ###

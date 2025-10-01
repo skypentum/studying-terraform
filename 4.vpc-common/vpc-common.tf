@@ -1,9 +1,3 @@
-#destination : terraform_program_access
-provider "aws" {
-  profile="studying_terraform"
-  region = var.aws_use_region
-}
-
 # # 아래 명령어를 사용하여 ssh 공개 키 생성
 # # ssh-keygen -t rsa -b 2048 -f ssh-key/id_rsa 
 # resource "aws_key_pair" "ssh-key" {
@@ -109,6 +103,7 @@ resource "aws_route_table" "vpc-common-rt-a" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_nat_gateway.vpc-common-nat-a.id
   }
+
   tags = {
     Name = "vpc-common-private-route-table-a"
   }
@@ -119,33 +114,50 @@ resource "aws_route_table_association" "vpc-common-rt-a-association" {
   route_table_id = aws_route_table.vpc-common-rt-a.id
 }
 
-resource "aws_eip" "vpc-common-nat-eip-c" {
-  domain = "vpc"
-}
-
-resource "aws_nat_gateway" "vpc-common-nat-c" {
-  allocation_id = aws_eip.vpc-common-nat-eip-c.id
-  subnet_id     = aws_subnet.vpc-common-private-subnet-c.id
-  tags = {
-    Name = "nat-gateway-c"
-  }
-}
-
-resource "aws_route_table" "vpc-common-rt-c" {
-  vpc_id = aws_vpc.vpc-common.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.vpc-common-nat-a.id
-  }
-  tags = {
-    Name = "vpc-common-private-route-table-c"
-  }
-}
-
 resource "aws_route_table_association" "vpc-common-rt-c-association" {
   subnet_id      = aws_subnet.vpc-common-private-subnet-c.id
-  route_table_id = aws_route_table.vpc-common-rt-c.id
+  route_table_id = aws_route_table.vpc-common-rt-a.id
 }
+
+# resource "aws_eip" "vpc-common-nat-eip-c" {
+#   domain = "vpc"
+# }
+
+# resource "aws_nat_gateway" "vpc-common-nat-c" {
+#   allocation_id = aws_eip.vpc-common-nat-eip-c.id
+#   subnet_id     = aws_subnet.vpc-common-private-subnet-c.id
+#   tags = {
+#     Name = "nat-gateway-c"
+#   }
+# }
+
+# resource "aws_route_table" "vpc-common-rt-c" {
+#   vpc_id = aws_vpc.vpc-common.id
+#   route {
+#     cidr_block = "0.0.0.0/0"
+#     gateway_id = aws_nat_gateway.vpc-common-nat-a.id
+#   }
+#   tags = {
+#     Name = "vpc-common-private-route-table-c"
+#   }
+# }
+
+# resource "aws_route_table_association" "vpc-common-rt-c-association" {
+#   subnet_id      = aws_subnet.vpc-common-private-subnet-c.id
+#   route_table_id = aws_route_table.vpc-common-rt-c.id
+# }
+
+# # 문해력 계정에 S3 VPC 엔드포인트 생성
+# resource "aws_vpc_endpoint" "s3_endpoint" {
+#   vpc_id          = aws_vpc.vpc-common.id
+#   service_name    = "com.amazonaws.${var.aws_use_region}.s3"
+#   route_table_ids = aws_route_tables.private_route_tables.ids
+#   vpc_endpoint_type = "Gateway"
+  
+#   tags = {
+#     Name = "LTRC-dev-S3-VPC-Endpoint"
+#   }
+# }
 
 
 

@@ -1,8 +1,3 @@
-provider "aws" {
-  profile="studying_terraform"
-  region = var.aws_use_region
-}
-
 # 서비스 Docker 이미지 빌드
 # resource "docker_image" "docker-image" {
 #   name = "docker_ecr_test:latest"
@@ -79,8 +74,7 @@ resource "aws_ecr_repository_policy" "aws-nginx-policy" {
 
 resource "null_resource" "push-image" {
   depends_on = [
-    aws_ecr_repository.aws-nginx,
-    aws_ecr_repository.aws-httpd
+    aws_ecr_repository.aws-nginx
   ]
  
   provisioner "local-exec" {

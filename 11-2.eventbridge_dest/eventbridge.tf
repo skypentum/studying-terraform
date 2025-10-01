@@ -1,9 +1,3 @@
-#destination : terraform_program_access
-provider "aws" {
-  profile = "studying_terraform"
-  region  = var.aws_use_region
-}
-
 resource "aws_iam_policy" "dest-eventrule-Policy" {
   name        = "dest-eventrule-Policy"
   description = "integrating codepipeline with kyowonsmart codecommit for member."

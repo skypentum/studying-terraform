@@ -1,9 +1,3 @@
-#destination : terraform_program_access
-provider "aws" {
-  profile="studying_terraform"
-  region = var.aws_use_region
-}
-
 data "aws_key_pair" "existing_key" {
   key_name           = var.key_pair_name
   include_public_key = true # 공개 키도 조회 (선택 사항)

@@ -1,9 +1,3 @@
-#destination : terraform_program_access
-provider "aws" {
-  profile = "studying_terraform"
-  region  = var.aws_use_region
-}
-
 data "aws_vpc" "test-VPC" {
   id = var.vpc_id
 }

@@ -1,10 +1,3 @@
-
-# Provider configuration
-provider "aws" {
-  profile="studying_terraform"
-  region = var.aws_use_region
-}
-
 # VPC and Networking
 resource "aws_vpc" "main" {
   cidr_block           = "100.0.0.0/16"

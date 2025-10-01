@@ -1,8 +1,3 @@
-provider "aws" {
-  profile="studying_terraform"
-  region = var.aws_use_region
-}
-
 data "aws_vpc" "vpc-common" {
   id = var.vpc_id
 }

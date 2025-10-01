@@ -1,8 +1,3 @@
-provider "aws" {
-  profile = "studying_terraform"
-  region  = var.aws_use_region
-}
-
 resource "aws_s3_bucket" "kdi0913-mywebpage" {
   bucket = "kdi0913-mywebpage"
 }

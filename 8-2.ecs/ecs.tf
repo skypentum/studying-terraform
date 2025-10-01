@@ -1,9 +1,3 @@
-#destination : terraform_program_access
-provider "aws" {
-  profile="studying_terraform"
-  region = var.aws_use_region
-}
-
 resource "aws_iam_role" "ecs-task-exec" {
   name = "ecsTaskExecutionRole"
   assume_role_policy = jsonencode({
